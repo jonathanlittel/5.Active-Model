@@ -10,7 +10,7 @@
   setwd(wd)
 
 # Load underwriting Model pds  
-  filename <-  "pds_05.28.16.csv"
+  filename <-  "pds_06.22.16.csv"
   df.rap <- read.csv(filename, header=TRUE, sep=",")
   
   wd <- "C:/Box Sync/Risk Appetite - Provisioning Project/Working Folders for RAP Modules/Risk Profile/PD Model/5.Active Model"
@@ -63,26 +63,37 @@
             mutate(Special_Mention = replace(Special_Mention, WO=="Writeoff", 1)) %>%
             mutate(Substandard = replace(Substandard, WO=="Writeoff", 1)) %>%
             mutate(Doubtful = replace(Doubtful, WO=="Writeoff", 1)) 
+# Subset to active / inactive
+  df.rap.inactive <- filter(df.rap, active==0)
 
 ################################################
 #                                      # 
 #               Models               #   
 ################################################
 
-# Subset to active / inactive
-  df.rap.inactive <- filter(df.rap, active==0)
+#####
+            ###
+#############################################################################
+# Replace the pd with the cumulative prob of the 1 year pd given the tenor
+            df.rap$pd_orig <- df.rap$pd
+            df.rap$pd <- df.rap$pd_multiple_years
+            df.rap.inactive$pd_orig <- df.rap.inactive$pd
+            df.rap.inactive$pd <- df.rap.inactive$pd_multiple_years
+#############################################################################
+
 
 # create table for recording means of writeoffs of different cuts
     mean_pred <- data.frame(temp=mean(as.numeric(df.rap.inactive$WO)-1))
 
 # test on pd to pd 
-    modelColsSM <- c("WO",
+    modelColsC <- c("WO",
                     "pd")
-  df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmCurrent <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsC]
+  glmCurrent <-glm(WO ~ pd , data=df.model, family='binomial', na.action=na.exclude) # 
   pd_current_test <- predict(glmCurrent, df.rap.inactive, type='response')
-  plot(pd_current_test, df.rap.inactive$pd)
+  plot( df.rap.inactive$pd, pd_current_test)
   abline(a=0, b=1)
+  abline(v=0.2, h=0.2)
 
 # # Prob of migration from Current given pmt and watch list status to WO #
 # ###############
@@ -101,27 +112,30 @@
 # Watch list to WO
 ###############
   # df.rap.inactive <- filter(df.rap.inactive , watch_list==1) #
-  # modelColsC <- c("WO",
-  #                   "pd", 'watch_list', 'pmt_1k')
-  df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsC]
-  glmWLWO <-glm(WO ~ pd + log(pd) + watch_list , data=df.model, family='binomial', na.action=na.exclude)
+  modelColsWL <- c("WO",
+                    "pd")
+  df.model <- filter(df.rap.inactive, watch_list==1)
+  df.model <- df.model[,names(df.model) %in% modelColsWL]
+  glmWLWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
-  df.rap.inactive$pdWLWO <- predict(glmWLWO, df.rap.inactive, family='binomial', type='response')
-  mean_pred$pdWLWO <- mean(df.rap.inactive$pdWLWO)
+  df.model$pdWLWO <- predict(glmWLWO, df.model, family='binomial', type='response')
+  mean_pred$pdWLWO <- mean(df.model$pdWLWO)
   ############
+
 
 # With payment to WO
 ###############
   # df.rap.inactive <- filter(df.rap.inactive , pmt_1k==1) #
-  # modelColsC <- c("WO",
-  #                   "pd", 'watch_list', 'pmt_1k')
-  df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsC]
-  glmPMTWO <-glm(WO ~ pd + log(pd) + pmt_1k, data=df.model, family='binomial', na.action=na.exclude)
+  modelColsPMT <- c("WO",
+                    "pd")
+  df.model <- filter(df.rap.inactive, pmt_1k==1)
+  df.model <- df.model[,names(df.model) %in% modelColsPMT]
+  glmPMTWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
-  df.rap.inactive$pdPMT <- predict(glmPMTWO, df.rap.inactive, family='binomial', type='response')
-  mean_pred$pdPMT <- mean(df.rap.inactive$pdPMT)
+  df.model$pdPMT <- predict(glmPMTWO, df.model, family='binomial', type='response')
+  mean_pred$pdPMT <- mean(df.model$pdPMT)
   ############
 
 
@@ -147,7 +161,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmSMWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
+  glmSMWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   df.rap.inactive$pdSMWO <- predict(glmSMWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$SM <- mean(df.rap.inactive$pdSMWO)
@@ -160,7 +174,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmSubWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
+  glmSubWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSubWO)
   df.rap.inactive$pdSubWO <- predict(glmSubWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$Sub <- mean(df.rap.inactive$pdSubWO)
@@ -174,7 +188,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmDWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
+  glmDWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmDWO)
   df.rap.inactive$pdDWO <- predict(glmDWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$D <- mean(df.rap.inactive$pdDWO)
@@ -187,6 +201,9 @@
   df.rap.inactive <- filter(df.rap, active==0)
   df.rap.inactive$WO_num <- as.numeric(df.rap.inactive$WO) - 1
   mean_pred[2,1] <- sum(df.rap.inactive$WO_num) / nrow(df.rap.inactive) 
+  mean_pred[2,2] <- sum(df.rap.inactive$WO_num[df.rap.inactive$watch_list==1]) / sum(df.rap.inactive$watch_list)
+  mean_pred[2,3] <- sum(df.rap.inactive$WO_num[df.rap.inactive$pmt_1k==1]) / sum(df.rap.inactive$pmt_1k)
+
   mean_pred[2,4] <- sum(df.rap.inactive$WO_num) / sum(df.rap.inactive$Special_Mention)
   mean_pred[2,5] <- sum(df.rap.inactive$WO_num) / sum(df.rap.inactive$Substandard)
   mean_pred[2,6] <- sum(df.rap.inactive$WO_num) / sum(df.rap.inactive$Doubtful) 
@@ -278,13 +295,13 @@ u
 
 
 # write coefficients
-  coefs_out <- t(data.frame(
+  coefs_out <- data.frame(
     'watch list' = coef(glmWLWO),
     'payment received' = coef(glmPMTWO),
     'special mention' = coef(glmSMWO),
     'Substandard' = coef(glmSubWO),
     'Doubtful' = coef(glmDWO)
-    ))
+    )
 
   write.xlsx(coefs_out, file=filename, sheetName='coefficients', append=TRUE)
 
