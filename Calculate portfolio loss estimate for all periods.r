@@ -23,6 +23,11 @@ library(lubridate)
 	# 1. Run report Balance and risk category risk profile from lending adaptive
 	# 2. format all columns as 'general'. Format first column as 'short date' (eg mm/dd/yyyy)
 	# 3. save as csv
+	  wd <- paste('C:/Box Sync/Risk Appetite - Provisioning Project/',
+	    'Working Folders for RAP Modules/Risk Profile/PD Model/',
+	    '5.Active Model/data',
+	    sep = '')
+	  setwd(wd)
 
 	filename <- 'Balance_and_risk_category_risk_profile.csv'
 		bal <- read.csv(filename, skip=1)
@@ -63,7 +68,7 @@ library(lubridate)
 # load pds 
   wd <- "C:/Box Sync/Risk Appetite - Provisioning Project/Working Folders for RAP Modules/Risk Profile/PD Model/3.Outputs"
   setwd(wd)
-  filename <-  "risk_profile_pds_05.28.16.csv"
+  filename <-  "risk_profile_pds_06.22.16.csv"
   df.rap <- read.csv(filename, header=TRUE, sep=",")
 
  # merge pds and guarantees

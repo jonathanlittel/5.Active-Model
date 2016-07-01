@@ -101,7 +101,7 @@
 #   # modelColsC <- c("WO",
 #   #                   "pd", 'watch_list', 'pmt_1k')
 #   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsC]
-#   glmCurPmtWL <-glm(WO ~ pd + log(pd) + watch_list + pmt_1k, data=df.model, family='binomial', na.action=na.exclude)
+#   glmCurPmtWL <-glm(WO ~ . + watch_list + pmt_1k, data=df.model, family='binomial', na.action=na.exclude)
 #   # summary(glmSMWO)
 #   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
 #   df.rap.inactive$pdCurPmtWL <- predict(glmCurPmtWL, df.rap.inactive, family='binomial', type='response')
@@ -116,7 +116,7 @@
                     "pd")
   df.model <- filter(df.rap.inactive, watch_list==1)
   df.model <- df.model[,names(df.model) %in% modelColsWL]
-  glmWLWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  glmWLWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
   df.model$pdWLWO <- predict(glmWLWO, df.model, family='binomial', type='response')
@@ -131,7 +131,7 @@
                     "pd")
   df.model <- filter(df.rap.inactive, pmt_1k==1)
   df.model <- df.model[,names(df.model) %in% modelColsPMT]
-  glmPMTWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  glmPMTWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
   df.model$pdPMT <- predict(glmPMTWO, df.model, family='binomial', type='response')
@@ -145,7 +145,7 @@
 #   # modelColsC <- c("WO",
 #   #                   "pd", 'watch_list', 'pmt_1k')
 #   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsC]
-#   glmCurPmtWL <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+#   glmCurPmtWL <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
 #   # summary(glmSMWO)
 #   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
 #   df.rap.inactive$pdCurPmtWL <- predict(glmCurPmtWL, df.rap.inactive, family='binomial', type='response')
@@ -161,7 +161,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmSMWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  glmSMWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSMWO)
   df.rap.inactive$pdSMWO <- predict(glmSMWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$SM <- mean(df.rap.inactive$pdSMWO)
@@ -174,7 +174,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmSubWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  glmSubWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmSubWO)
   df.rap.inactive$pdSubWO <- predict(glmSubWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$Sub <- mean(df.rap.inactive$pdSubWO)
@@ -188,7 +188,7 @@
   modelColsSM <- c("WO",
                     "pd")
   df.model <- df.rap.inactive[,names(df.rap.inactive) %in% modelColsSM]
-  glmDWO <-glm(WO ~ pd + log(pd), data=df.model, family='binomial', na.action=na.exclude)
+  glmDWO <-glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   # summary(glmDWO)
   df.rap.inactive$pdDWO <- predict(glmDWO, df.rap.inactive, family='binomial', type='response')
   mean_pred$D <- mean(df.rap.inactive$pdDWO)
@@ -259,7 +259,9 @@
   mean_pred
 
 # Return loanIDs where the pd is lower at any step in migration
+
   wrong_way <- c()
+  # df.predict$LoanID[!df.predict$pdpmt>df.predict$pd])  
   wrong_way <- c(wrong_way, df.predict$LoanID[!df.predict$pdWL<df.predict$pdSMWO])  
   wrong_way <- c(wrong_way, df.predict$LoanID[!df.predict$pd<df.predict$pdSMWO])
   wrong_way <- c(wrong_way, df.predict$LoanID[!df.predict$pdSMWO<df.predict$pdSubWO])
@@ -312,7 +314,7 @@ file.show(filename)
 
 df.predict <- select(df.predict, -(Current:Doubtful))
 # df.predict <- optionally could combine the dummies for risk categories
-out <- dplyr::select(df.predict, LoanID:Max_Risk_Category, pdSMWO:pdDWO, RC.Opp.Number)
+out <- dplyr::select(df.predict, LoanID:Max_Risk_Category, pd:pdDWO, RC.Opp.Number)
 write.csv(out, 'risk_profile_pds.csv')
 
 ########################
@@ -340,7 +342,7 @@ u + theme(axis.text.x=element_text(angle=60,vjust=0.75)) #,hjust=1
 # filtering for just lower pds
   pdsWO_all <- pds_to_WO_all %>%
       filter(pd<0.25) %>%
-      gather(migration, pds, pd:pdDWO)
+      gather(migration, pds, pd, pdpmt:pdDWO)
 # pdsWO_all$migration <- factor(pdsWO_all$migration,
 #   levels= c('pd', 'pdWL_noPmt', 'pdpmt', 'pdWL_pmt','pdSMWO', 'pdSubWO', 'pdDWO'),
 #   labels= c('Current', 'Watch List', 'Received Payment', 'WL and Received Payment',
