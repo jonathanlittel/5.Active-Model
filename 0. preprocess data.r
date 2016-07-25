@@ -45,6 +45,13 @@ library(purrr)
   guar <- read.csv(filename, skip = 1)
   guar <- select(guar, LoanID = Loan.ID, guarantee = X..Guaranteed)
 
+  # recovery data
+  filename <- 'recoveries.csv'
+  recov <- read.csv(filename)
+  recov <- select(recov, LoanID = as.numeric(Loan.ID), recovery = Internal.Recoveries.Paid)
+  recov$LoanID <- as.numeric(recov$LoanID)
+  # summarise recovery by LoanID
+  recov <- recov %>% group_by(LoanID) %>% summarise(recovery = sum(recovery))
 # format date
   df.pmt$date <- as.Date(df.pmt$date, "%m/%d/%Y")
   df.risk$date <- as.Date(df.risk$date, "%m/%d/%Y")
@@ -78,6 +85,10 @@ library(purrr)
 		str(bal)
 		bal$LoanID <- as.numeric(as.character(bal$LoanID))
 		# bal$balance[is.na(bal$LoanID)] # some have no loan id but have 0 bal
+		bal$balance_temp <- as.character(bal$balance)
+		bal$balance_temp <- gsub(",","", bal$balance_temp)
+		bal$balance      <- as.numeric(as.character(bal$balance_temp))
+		bal$balance_temp <- NULL
 		bal <- filter(bal, !is.na(LoanID))
 # function to convert to last day of month
 	last_day <- function(date) {
@@ -127,7 +138,8 @@ library(purrr)
   df4 <- merge(df3, df.r_cat, by=c('LoanID', 'date'), all.x=TRUE)
   df5 <- merge(df4, collateral, by=c('LoanID'), all.x=TRUE)
   df6 <- merge(df5, guar, by='LoanID', all.x=TRUE)
-  df  <- df6
+  df7 <- merge(df6, recov, by='LoanID', all.x=TRUE)
+  df  <- df7
   sum(duplicated(df3[,c('LoanID', 'date')]))
 # Fill data for all periods
   df <- df %>%
@@ -162,9 +174,7 @@ library(purrr)
   		) %>%
   	ungroup()
 
-# filter for balance <200 (including negative)
-  # df <- filter(df, balance>200)
-
+# find 'first date' - presumably 
 # clean up df for NAs
 	nazero <- function(x) {
 		x[is.na(x)] <- 0
@@ -175,13 +185,22 @@ library(purrr)
   df <- df %>%
   	mutate(counter = 1) %>%
   	arrange(LoanID, date) %>%
-    group_by(LoanID, risk_category_sf) %>%
-    mutate(months_in_risk_cat = cumsum(counter)) %>%
+    group_by(LoanID, risk_category) %>%
+    mutate(months_in_risk_cat_cum = cumsum(counter)) %>%
   	ungroup()
 
   df$counter <- NULL
-  df$months_in_risk_cat_sq <- df$months_in_risk_cat^2
+  df$months_in_risk_cat_cum_sq <- df$months_in_risk_cat_cum^2
 
+# count of months in risk category restarting on category change
+  df <- df %>%
+  	arrange(LoanID, date) %>%
+    group_by(LoanID) %>%
+    mutate(months_in_risk_cat = sequence(rle(as.character(risk_category))[['lengths']])) %>%
+  	ungroup()
+
+  df$months_in_risk_cat_sq <- df$months_in_risk_cat^2
+  df$months_in_risk_cat_cube <- df$months_in_risk_cat^3
 # create tenor at date
   df$remaining_tenor <- ifelse(is.na(df$maturity_date),
   	df$Maturity.at.Origination - df$date,

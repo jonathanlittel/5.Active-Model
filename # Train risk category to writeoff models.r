@@ -121,6 +121,9 @@
   # df.rap.active$pdSub <- predict(glmSub, df.rap.active, family='binomial', type='response')
   df.model$pdWLWO <- predict(glmWLWO, df.model, family='binomial', type='response')
   mean_pred$pdWLWO <- mean(df.model$pdWLWO)
+  plot( df.model$pd, df.model$pdWLWO)
+  abline(a=0, b=1)
+  abline(v=0.2, h=0.2)
   ############
 
 

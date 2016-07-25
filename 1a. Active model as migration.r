@@ -4,7 +4,7 @@
 
 # add active on 4/30/16
   active <- data.frame(
-    LoanID = df$LoanID[df$balance>0 & df$date=='2016-04-30'],
+    LoanID = r$LoanID[r$balance>0 & r$date=='2016-04-30'],
     active = 1
     )
 
@@ -20,7 +20,7 @@
     rownames(mean_pred) <- c('mean_pd', 'mean_actual')
 
 # test on pd to pd 
-  df.current <- filter(df, active==0, Close.Date<'2014-01-01')
+  df.current <- filter(df, active==0)
     modelColsC <- c("WO",
                     "pd",
                     'months_in_risk_cat',
@@ -37,15 +37,11 @@
 #----------------------
 # Watch list to WO
 #----------------------
-  df.wl <- filter(df, active==0, watch_list==1, risk_category==1, date>'2013-03-27', date<'2015-01-01')
-  # df.wl <- filter(df.one_per_loan, active==0, wl_max==1, risk_category==1) #, Close.Date<'2014-01-01')
-  # watch list started to be categorized on march 27, 2013. It's not the same thing before that date. 
-  # Careful - months in category is calculated for months in current - should be starting 3/27/13 on watchlist
+  df.wl <- filter(df, active==0, watch_list==1, risk_category==1)
   modelColsWL <- c("WO",
-                    "pd")
-  # ,
-  #                   'months_in_risk_cat',
-  #                   'months_in_risk_cat_sq')
+                    "pd",
+                    'months_in_risk_cat',
+                    'months_in_risk_cat_sq')
   df.model <- df.wl[,names(df.wl) %in% modelColsWL]
   glm.wl <- glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   pd_wl <- predict(glm.wl, df.wl, family='binomial', type='response')
@@ -54,15 +50,14 @@
   summary(df.model$WO)
   plot(df.wl$pd, pd_wl)
   abline(a=0, b=1)
-  
 #----------------------
 # Received payment to WO
 #----------------------
-  df.pmt1k <- filter(df, active==0, pmt_1k==1, risk_category==1, watch_list==0, Close.Date<'2014-01-01')
+  df.pmt1k <- filter(df, active==0, pmt_1k==1, risk_category==1, watch_list==0)
   modelColsWL <- c("WO",
-                    "pd")
-                    # 'months_in_risk_cat',
-                    # 'months_in_risk_cat_sq')
+                    "pd",
+                    'months_in_risk_cat',
+                    'months_in_risk_cat_sq')
   df.model <- df.pmt1k[,names(df.pmt1k) %in% modelColsWL]
   glm.pmt1k <- glm(WO ~ ., data=df.model, family='binomial', na.action=na.exclude)
   pd_pmt1k <- predict(glm.pmt1k, df.pmt1k, family='binomial', type='response')
@@ -76,7 +71,7 @@
 # SM to WO            #
 #----------------------
   # first need to filter for loans that made it to SM (and thus have a chance of migrating)
-  df.sm <- filter(df, active==0, Special_Mention==1, months_in_risk_cat<12, Close.Date<'2014-01-01')
+  df.sm <- filter(df, active==0, Special_Mention==1, months_in_risk_cat<12)
   modelColsSM <- c("WO",
                     "pd",
                     'months_in_risk_cat',
@@ -92,7 +87,7 @@
 #----------------------
 # Substandard to WO   #
 #----------------------
-  df.sub <- filter(df, active==0, Substandard==1, Close.Date<'2014-01-01')
+  df.sub <- filter(df, active==0, Substandard==1)
   modelColsSM <- c("WO",
                     "pd",
                     'months_in_risk_cat',
@@ -102,16 +97,12 @@
   pd_sub <- predict(glm.sub, df.sub, family='binomial', type='response')
   mean_pred$substandard <- mean(pd_sub)
   mean_pred$substandard[2] <-sum(df.sub$balance[df.sub$WO=='Writeoff']) / sum(df.sub$balance)
-  plot(df.sub$pd, pd_sub)
-  abline(a=0, b=1)
-  abline(v=0.2, h=0.2)
 
 
 
 #----------------------
 # Doubtful to WO      #
 #----------------------
-  # df.doubt <- filter(df, active==0, Doubtful==1, Close.Date<'2014-01-01')
   df.doubt <- filter(df, active==0, Doubtful==1)
   modelColsSM <- c("WO",
                     "pd",
@@ -126,7 +117,7 @@
   plot(df.doubt$pd, pd_doubt)
 
 
-library(ggplot2)
+
 change <- ggplot(filter(data.frame(df.sm, pdSMWO), months_in_risk_cat<20),
   aes(x=months_in_risk_cat, y=pdSMWO, group=LoanID))
 change + geom_line(aes(color=LoanID))
